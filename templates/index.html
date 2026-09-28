@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>EduGenie - AI Learning Assistant</title>
+
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+
+<div class="page">
+
+    <header class="hero">
+
+        <div class="logo">
+            🎓
+        </div>
+
+        <div>
+            <h1>EduGenie</h1>
+
+            <p>
+                AI-Powered Learning Assistant
+            </p>
+        </div>
+
+    </header>
+
+
+    <main class="card">
+
+        <div class="intro">
+
+            <h2>Learn Smarter with AI</h2>
+
+            <p>
+                Ask questions, simplify concepts, create quizzes,
+                summarize content, and build personalized learning paths.
+            </p>
+
+        </div>
+
+
+        <form id="eduForm">
+
+            <label for="task">
+                What would you like EduGenie to do?
+            </label>
+
+            <select id="task">
+
+                <option value="qa">
+                    Ask a Question
+                </option>
+
+                <option value="explain">
+                    Explain a Concept
+                </option>
+
+                <option value="quiz">
+                    Generate a Quiz
+                </option>
+
+                <option value="summarize">
+                    Summarize
+                </option>
+
+                <option value="recommendations">
+                    Recommend Learning Path
+                </option>
+
+            </select>
+
+
+            <label for="text">
+                Enter your topic or text
+            </label>
+
+            <textarea
+                id="text"
+                placeholder="Example: Explain photosynthesis in simple words..."
+            ></textarea>
+
+
+            <button
+                id="submitButton"
+                type="submit"
+            >
+
+                <span id="buttonText">
+                    Ask EduGenie
+                </span>
+
+                <span
+                    id="spinner"
+                    class="spinner hidden"
+                ></span>
+
+            </button>
+
+        </form>
+
+
+        <div
+            id="error"
+            class="error hidden"
+        ></div>
+
+
+        <section
+            id="resultSection"
+            class="result-section hidden"
+        >
+
+            <div class="result-header">
+
+                <h2>
+                    EduGenie's Response
+                </h2>
+
+                <button
+                    id="clearButton"
+                    class="secondary-button"
+                    type="button"
+                >
+                    Clear
+                </button>
+
+            </div>
+
+
+            <div
+                id="result"
+                class="result"
+            ></div>
+
+        </section>
+
+    </main>
+
+
+    <footer>
+
+        EduGenie • Gemini Powered Learning Assistant
+
+    </footer>
+
+</div>
+
+
+<script>
+
+const form = document.getElementById("eduForm");
+
+const taskSelect =
+    document.getElementById("task");
+
+const textInput =
+    document.getElementById("text");
+
+const submitButton =
+    document.getElementById("submitButton");
+
+const buttonText =
+    document.getElementById("buttonText");
+
+const spinner =
+    document.getElementById("spinner");
+
+const resultSection =
+    document.getElementById("resultSection");
+
+const resultDiv =
+    document.getElementById("result");
+
+const errorDiv =
+    document.getElementById("error");
+
+const clearButton =
+    document.getElementById("clearButton");
+
+
+const endpoints = {
+
+    qa: "/qa",
+
+    explain: "/explain",
+
+    quiz: "/quiz",
+
+    summarize: "/summarize",
+
+    recommendations:
+        "/learn/recommendations"
+
+};
+
+
+const placeholders = {
+
+    qa:
+        "Example: What is photosynthesis?",
+
+    explain:
+        "Example: Explain quantum physics in simple words.",
+
+    quiz:
+        "Example: Create a quiz about Python programming.",
+
+    summarize:
+        "Paste the text you want to summarize...",
+
+    recommendations:
+        "Example: I want to learn Python from beginner to advanced."
+
+};
+
+
+taskSelect.addEventListener(
+    "change",
+    function () {
+
+        textInput.placeholder =
+            placeholders[taskSelect.value];
+
+    }
+);
+
+
+form.addEventListener(
+    "submit",
+    async function (event) {
+
+        event.preventDefault();
+
+        const task =
+            taskSelect.value;
+
+        const text =
+            textInput.value.trim();
+
+
+        if (!text) {
+
+            showError(
+                "Please enter some text first."
+            );
+
+            return;
+
+        }
+
+
+        setLoading(true);
+
+        hideError();
+
+        resultSection.classList.add(
+            "hidden"
+        );
+
+
+        try {
+
+            const response =
+                await fetch(
+                    endpoints[task],
+                    {
+
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body:
+                            JSON.stringify({
+                                text: text
+                            })
+
+                    }
+                );
+
+
+            const data =
+                await response.json();
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    data.detail ||
+                    "Something went wrong."
+                );
+
+            }
+
+
+            displayResult(
+                data.result,
+                task
+            );
+
+
+        }
+        catch (error) {
+
+            showError(
+                error.message
+            );
+
+        }
+        finally {
+
+            setLoading(false);
+
+        }
+
+    }
+);
+
+
+clearButton.addEventListener(
+    "click",
+    function () {
+
+        resultDiv.innerHTML = "";
+
+        resultSection.classList.add(
+            "hidden"
+        );
+
+    }
+);
+
+
+function setLoading(isLoading) {
+
+    submitButton.disabled =
+        isLoading;
+
+
+    if (isLoading) {
+
+        buttonText.textContent =
+            "Thinking...";
+
+        spinner.classList.remove(
+            "hidden"
+        );
+
+    }
+    else {
+
+        buttonText.textContent =
+            "Ask EduGenie";
+
+        spinner.classList.add(
+            "hidden"
+        );
+
+    }
+
+}
+
+
+function displayResult(
+    result,
+    task
+) {
+
+    resultSection.classList.remove(
+        "hidden"
+    );
+
+
+    if (
+        task === "quiz" &&
+        Array.isArray(result)
+    ) {
+
+        displayQuiz(result);
+
+        return;
+
+    }
+
+
+    if (
+        typeof result === "object" &&
+        result !== null
+    ) {
+
+        resultDiv.innerHTML =
+            formatObject(result);
+
+        return;
+
+    }
+
+
+    resultDiv.innerHTML =
+        formatText(
+            String(result)
+        );
+
+}
+
+
+function displayQuiz(questions) {
+
+    resultDiv.innerHTML = "";
+
+
+    questions.forEach(
+        function (question, index) {
+
+            const questionDiv =
+                document.createElement("div");
+
+            questionDiv.className =
+                "quiz-question";
+
+
+            const heading =
+                document.createElement("h3");
+
+            heading.textContent =
+                `${index + 1}. ${question.question}`;
+
+
+            questionDiv.appendChild(
+                heading
+            );
+
+
+            const optionsDiv =
+                document.createElement("div");
+
+            optionsDiv.className =
+                "options";
+
+
+            const options =
+                question.options || {};
+
+
+            ["A", "B", "C", "D"].forEach(
+                function (letter) {
+
+                    const optionButton =
+                        document.createElement("button");
+
+                    optionButton.type =
+                        "button";
+
+                    optionButton.className =
+                        "option";
+
+                    optionButton.textContent =
+                        `${letter}. ${options[letter] || ""}`;
+
+
+                    optionButton.addEventListener(
+                        "click",
+                        function () {
+
+                            checkAnswer(
+                                optionButton,
+                                letter,
+                                question.correct_answer,
+                                optionsDiv
+                            );
+
+                        }
+                    );
+
+
+                    optionsDiv.appendChild(
+                        optionButton
+                    );
+
+                }
+            );
+
+
+            questionDiv.appendChild(
+                optionsDiv
+            );
+
+
+            const feedback =
+                document.createElement("div");
+
+            feedback.className =
+                "quiz-feedback";
+
+
+            questionDiv.appendChild(
+                feedback
+            );
+
+
+            questionDiv.dataset.feedback =
+                "true";
+
+
+            questionDiv.dataset.correct =
+                question.correct_answer;
+
+
+            resultDiv.appendChild(
+                questionDiv
+            );
+
+
+            questionDiv._feedback =
+                feedback;
+
+        }
+    );
+
+}
+
+
+function checkAnswer(
+    clickedButton,
+    selectedAnswer,
+    correctAnswer,
+    optionsDiv
+) {
+
+    const questionDiv =
+        optionsDiv.parentElement;
+
+    const feedback =
+        questionDiv._feedback;
+
+
+    const buttons =
+        optionsDiv.querySelectorAll(
+            "button"
+        );
+
+
+    buttons.forEach(
+        function (button) {
+
+            button.disabled = true;
+
+        }
+    );
+
+
+    if (
+        selectedAnswer === correctAnswer
+    ) {
+
+        clickedButton.classList.add(
+            "correct"
+        );
+
+        feedback.textContent =
+            "Correct! 🎉";
+
+        feedback.className =
+            "quiz-feedback correct-text";
+
+    }
+    else {
+
+        clickedButton.classList.add(
+            "incorrect"
+        );
+
+        feedback.textContent =
+            `Incorrect. The correct answer is ${correctAnswer}.`;
+
+        feedback.className =
+            "quiz-feedback incorrect-text";
+
+
+        buttons.forEach(
+            function (button) {
+
+                if (
+                    button.textContent.startsWith(
+                        correctAnswer + "."
+                    )
+                ) {
+
+                    button.classList.add(
+                        "correct"
+                    );
+
+                }
+
+            }
+        );
+
+    }
+
+}
+
+
+function formatText(text) {
+
+    return `
+        <div class="text-result">
+            ${escapeHtml(text)
+                .replace(/\n/g, "<br>")}
+        </div>
+    `;
+
+}
+
+
+function formatObject(object) {
+
+    let html = "";
+
+    for (
+        const [key, value]
+        of Object.entries(object)
+    ) {
+
+        html += `
+            <div class="text-result">
+
+                <strong>
+                    ${escapeHtml(key)}
+                </strong>
+
+                <p>
+                    ${
+                        escapeHtml(
+                            String(value)
+                        )
+                    }
+                </p>
+
+            </div>
+        `;
+
+    }
+
+    return html;
+
+}
+
+
+function escapeHtml(text) {
+
+    const div =
+        document.createElement("div");
+
+    div.textContent =
+        text;
+
+    return div.innerHTML;
+
+}
+
+
+function showError(message) {
+
+    errorDiv.textContent =
+        message;
+
+    errorDiv.classList.remove(
+        "hidden"
+    );
+
+}
+
+
+function hideError() {
+
+    errorDiv.classList.add(
+        "hidden"
+    );
+
+}
+
+</script>
+
+</body>
+</html>
